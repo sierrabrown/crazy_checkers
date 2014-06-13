@@ -8,12 +8,13 @@ class Board
   end
   
   def seed
+    color = { 0 => "Red", 1 => "Red", 2 => "Red,", 5 => "Black", 6 => "Black", 7 => "Black"}
     
-    color = { 0 => "Red", 1 => "Red", 6 => "Black", 7 => "Black"}
-    
-    [0,1,6,7].each do |row|
+    [0,1,2,5,6,7].each do |row|
       (0..7).each do |col|
-        @grid[row][col] = Piece.new([row,col], color[row], self)
+        if (row.even? && col.odd?) || (row.odd? && col.even?)
+          @grid[row][col] = Piece.new([row,col], color[row], self)
+        end
       end
     end
   end
@@ -26,7 +27,7 @@ class Board
       row.each do |tile|
         if tile == nil
           print " _ "
-        elsif tile.is_a? Piece
+        elsif tile.is_a?(Piece)
           print " " + tile.symbol + " "
         end
       end
@@ -39,7 +40,7 @@ class Board
     @grid.each_with_index do |row, row_idx|
       row.each_with_index do |square, col_idx|
         unless square.nil? 
-          duped_piece = square.class.new([row_idx, col_idx], square.color, dup_grid)
+          duped_piece = square.class.new([row_idx, col_idx], square.color, dup_grid, square.king)
           dup_grid.grid[row_idx][col_idx] = duped_piece
         end
       end
@@ -47,15 +48,9 @@ class Board
     dup_grid
   end
   
-  
+  # TA: :white, :black
+  def won?(player_color)
+    player_color == "Black" ? other_color = "Red" : other_color = "Black"
+    @grid.flatten.compact.none? { |piece| piece.color == other_color }
+  end
 end
-
-b = Board.new
-b.seed
-b.grid[0][1].move!([5,4])
-b.grid[0][3].move!([3,4])
-b.display
-b.grid[6][3].perform_moves!([[4,5],[2,3]])
-#b.grid[6][3].perform_jump([4,5])
-
-b.display

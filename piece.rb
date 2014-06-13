@@ -1,19 +1,22 @@
+require 'debugger'
+
 class Piece
   attr_accessor :pos, :color, :symbol, :king
   
+  # TA: :up, :down
   DIRS = { "Up" => [[-1, 1],[-1, -1]], "Down" => [[1, -1],[1,1]] }
   
-  def initialize(pos, color, board)
+  def initialize(pos, color, board, king = false)
     @pos = pos
     @color = color
     @symbol = color[0]
-    @king = false
+    @king = king
     @board = board
   end
   
   def piece_dirs
     piece_dirs = []
-    if @king == false
+    if !@king
       if color == "Black"
         piece_dirs = DIRS["Up"]
       else
@@ -22,6 +25,7 @@ class Piece
     elsif @king == true
       piece_dirs = DIRS["Up"] + DIRS["Down"]
     end
+    piece_dirs
   end
   
   def legal_moves
@@ -30,17 +34,16 @@ class Piece
   end
   
   def legal_sliding(piece_dirs)
-    
     cur_x = pos[0]
     cur_y = pos[1]
     
     possible_moves = []
     piece_dirs.each do |dir|
-      # normal step
       first_x = cur_x + dir[0]
       first_y = cur_y + dir[1]
       
       if on_board?([first_x, first_y])
+        # TA: Board#empty?
         possible_moves << [first_x, first_y] if @board.grid[first_x][first_y] == nil
       end
     end
@@ -48,7 +51,6 @@ class Piece
   end
   
   def legal_jumping(piece_dirs)
-
     possible_moves = []
     piece_dirs.each do |dir|
       first_x = pos[0] + dir[0]
@@ -75,19 +77,15 @@ class Piece
   end
 
   def perform_slide(new_pos)
-    
-    if legal_sliding.include?(new_pos) 
+    if legal_sliding(piece_dirs).include?(new_pos) 
       move!(new_pos)
     else
       raise "Invalid move error."
     end
-    
   end
   
   def perform_jump(new_pos)
-    
     if legal_jumping(piece_dirs).include?(new_pos)
-
       victim_x = (new_pos[0] + pos[0]) / 2
       victim_y = (new_pos[1] + pos[1]) / 2
       
@@ -105,7 +103,7 @@ class Piece
     
     new_x = new_pos[0]
     new_y = new_pos[1]
-    @board.grid[x][y], @board.grid[new_x][new_y] = @board.grid[new_x][new_y], @board.grid[x][y]
+    @board.grid[x][y], @board.grid[new_x][new_y] = nil, @board.grid[x][y]
     @board.grid[new_x][new_y].pos = [new_x,new_y]
   end
   
@@ -116,19 +114,15 @@ class Piece
   end
   
   def perform_moves!(move_arr)
-    
-    
-    # sliding move
-    
-    if move_arr.count == 1
-      perform_slide(move_arr[0]) unless !legal_sliding.include?(move_arr[0])
-      move_arr.shift
+    jump = true
+    if move_arr.count == 2
+      if legal_sliding(piece_dirs).include?(move_arr[1])
+        perform_slide(move_arr[1])
+        jump = false
+      end
     end
-    
-    # jumping move
-    
-    if move_arr.count > 0
-      move_arr.each do |move|
+    if jump == true
+      move_arr[1..-1].each do |move|
         perform_jump(move)
       end
     end
@@ -143,14 +137,13 @@ class Piece
   end
   
   def valid_move_sequence?(move_arr)
-    new_grid = @board.grid.deep_dup
+    new_grid = @board.deep_dup
     begin
-      new_grid.perform_moves!
+     new_grid.grid[pos[0]][pos[1]].perform_moves!(move_arr)
     rescue
-      return false
+     return false
     else
-      return true
+     return true
     end
   end
-
 end
